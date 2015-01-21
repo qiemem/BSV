@@ -1,3 +1,5 @@
+extensions [ table csv ]
+
 globals [
   header
   full-data
@@ -30,7 +32,7 @@ to setup
     set color-reporter "who"
     set size-reporter "1"
     set label-reporter "\"\""
-    set group-by "who"
+    set group-by ""
     
     regroup
   ]
@@ -38,23 +40,29 @@ to setup
 end
 
 to regroup
+  let do-grouping? group-by != ""
   let group-by-task compile group-by
   clear-turtles
   
   foreach full-data [
     create-points 1 [
       set data ?
-      set group-id runresult group-by-task
       set data map [ (list ?) ] data
       set color extract-rgb color
       
-      let group one-of other points with [ group-id = [ group-id ] of myself ]
-      if group != nobody [
-        let new-data data
-        ask group [
-          set data (map sentence data new-data)
+      ifelse do-grouping? [
+        set group-id runresult group-by-task
+        
+        let group one-of other points with [ group-id = [ group-id ] of myself ]
+        if group != nobody [
+          let new-data data
+          ask group [
+            set data (map sentence data new-data)
+          ]
+          die
         ]
-        die
+      ] [
+        set group-id who
       ]
     ]
   ]
@@ -62,6 +70,7 @@ to regroup
   if all? points [ not is-group? ] [
     ask points [ set data map first data ]
   ]
+  ask points with [ not runresult filter-by ] [ die ]
 end
 
 to go
@@ -69,9 +78,15 @@ to go
   interpolate-to-normed-value (task [ xcor ]) (task [ set xcor ? ]) xcor-reporter min-pxcor max-pxcor rate
   interpolate-to-normed-value (task [ ycor ]) (task [ set ycor ? ]) ycor-reporter min-pxcor max-pycor rate
   interpolate-to-normed-value (task [ first color ]) (task [ set color (list ? 0 (255 - ?)) ]) color-reporter 0 255 rate
-  interpolate-to-normed-value (task [ size ]) (task [ set size ? ]) size-reporter 0.5 2 rate
+  interpolate-to-normed-value (task [ size ]) (task [ set size ? ]) size-reporter (0.5 * size-scale) (2 * size-scale) rate
   ask turtles [
     set label runresult label-reporter
+  ]
+  if mouse-inside? and mouse-down? [
+    print ""
+    (foreach header [ data ] of min-one-of turtles [ distancexy mouse-xcor mouse-ycor ] [
+       print (word ?1 ": " ?2)
+    ])
   ]
   display
 end
@@ -79,6 +94,7 @@ end
 to interpolate-to-normed-value [ getter setter reporter target-min target-max rate ]
   if is-string? reporter [ set reporter compile reporter ]
   let vals [ to-num runresult reporter ] of points
+  if empty? vals [ set vals [0] ]
   let min-val min vals
   let max-val max vals
   if min-val = max-val [ set max-val min-val + 1 ]
@@ -136,9 +152,9 @@ end
 to-report read-csv [ path skip-lines ]
   file-open path
   repeat header-line [ let skip file-read-line ]
-  let results (list split file-read-line ",")
+  let results (list csv:csv-row-to-strings file-read-line)
   while [ not file-at-end? ] [
-    set results lput (map read-from-string (split file-read-line ",")) results
+    set results lput (map read-from-string csv:csv-row-to-strings file-read-line) results
   ]
   file-close
   report results
@@ -183,15 +199,31 @@ to-report to-hsb [ rgb-color ]
   ]
   report map [ precision (? * 255) 3 ] (list h s v)
 end
+
+to-report min-x
+  report min [ to-num runresult xcor-reporter ] of points
+end
+
+to-report max-x
+  report max [ to-num runresult xcor-reporter ] of points
+end
+
+to-report min-y
+  report min [ to-num runresult ycor-reporter ] of points
+end
+
+to-report max-y
+  report max [ to-num runresult ycor-reporter ] of points
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
-531
+610
 10
-1041
+1120
 541
 -1
 -1
-9.433962264150944
+7.8125
 1
 10
 1
@@ -202,9 +234,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-52
+63
 0
-52
+63
 1
 1
 1
@@ -244,15 +276,15 @@ OUTPUT
 127
 197
 507
-12
+14
 
 INPUTBOX
-639
-541
-953
-604
+610
+595
+1120
+655
 xcor-reporter
-NIL
+\"[run number]\"
 1
 0
 String (reporter)
@@ -263,7 +295,7 @@ INPUTBOX
 530
 265
 ycor-reporter
-NIL
+\"ticks\"
 1
 0
 String (reporter)
@@ -291,7 +323,7 @@ INPUTBOX
 527
 345
 color-reporter
-NIL
+who
 1
 0
 String (reporter)
@@ -302,38 +334,38 @@ INPUTBOX
 526
 419
 size-reporter
-NIL
+1
 1
 0
 String (reporter)
 
 INPUTBOX
 214
-445
+474
 525
-505
+534
 label-reporter
-NIL
+\"\"
 1
 0
 String (reporter)
 
 INPUTBOX
-208
-10
+205
+70
 525
-89
+149
 group-by
-who
+NIL
 1
 1
 String (reporter)
 
 BUTTON
-271
-106
-353
-139
+268
+166
+350
+199
 NIL
 regroup
 NIL
@@ -413,6 +445,76 @@ NIL
 NIL
 NIL
 1
+
+SLIDER
+215
+427
+525
+460
+size-scale
+size-scale
+0
+10
+1
+.1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+530
+10
+610
+55
+NIL
+max-y
+3
+1
+11
+
+MONITOR
+535
+495
+610
+540
+NIL
+min-y
+3
+1
+11
+
+MONITOR
+610
+540
+685
+585
+NIL
+min-x
+3
+1
+11
+
+MONITOR
+1040
+540
+1120
+585
+NIL
+max-x
+3
+1
+11
+
+INPUTBOX
+205
+10
+525
+70
+filter-by
+(get \"interaction\") = \"evidential\"
+1
+0
+String (reporter)
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -757,7 +859,7 @@ Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 
 @#$#@#$#@
-NetLogo 5.1.0
+NetLogo 5.1.0-RC2
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -775,5 +877,5 @@ Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
 
 @#$#@#$#@
-0
+1
 @#$#@#$#@
