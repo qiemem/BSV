@@ -21,7 +21,7 @@ to setup
     set header first data-table
     set full-data but-first data-table
     let num-points length full-data
-    let max-cor (ceiling sqrt num-points) - 1
+    let max-cor num-points - 1
     resize-world 0 max-cor 0 max-cor
     set-patch-size 500 / (max-cor + 1)
     foreach header [
@@ -47,6 +47,7 @@ to regroup
   foreach full-data [
     create-points 1 [
       set data ?
+      if not empty? filter-by and not runresult filter-by [ die ]
       set data map [ (list ?) ] data
       set color extract-rgb color
       
@@ -70,13 +71,12 @@ to regroup
   if all? points [ not is-group? ] [
     ask points [ set data map first data ]
   ]
-  ask points with [ not runresult filter-by ] [ die ]
 end
 
 to go
   let rate 0.3
   interpolate-to-normed-value (task [ xcor ]) (task [ set xcor ? ]) xcor-reporter min-pxcor max-pxcor rate
-  interpolate-to-normed-value (task [ ycor ]) (task [ set ycor ? ]) ycor-reporter min-pxcor max-pycor rate
+  interpolate-to-normed-value (task [ ycor ]) (task [ set ycor ? ]) ycor-reporter min-pycor max-pycor rate
   interpolate-to-normed-value (task [ first color ]) (task [ set color (list ? 0 (255 - ?)) ]) color-reporter 0 255 rate
   interpolate-to-normed-value (task [ size ]) (task [ set size ? ]) size-reporter (0.5 * size-scale) (2 * size-scale) rate
   ask turtles [
@@ -150,11 +150,15 @@ to-report is-group?
 end
 
 to-report read-csv [ path skip-lines ]
+  file-close-all
   file-open path
   repeat header-line [ let skip file-read-line ]
   let results (list csv:csv-row-to-strings file-read-line)
   while [ not file-at-end? ] [
-    set results lput (map read-from-string csv:csv-row-to-strings file-read-line) results
+    let line file-read-line
+    if length line > 0 [
+      set results lput (map read-from-string csv:csv-row-to-strings line) results
+    ]
   ]
   file-close
   report results
@@ -219,11 +223,11 @@ end
 GRAPHICS-WINDOW
 610
 10
-1120
-541
+1117
+538
 -1
 -1
-7.8125
+55.55555555555556
 1
 10
 1
@@ -234,9 +238,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-63
+8
 0
-63
+8
 1
 1
 1
@@ -276,7 +280,7 @@ OUTPUT
 127
 197
 507
-14
+10
 
 INPUTBOX
 610
@@ -284,7 +288,7 @@ INPUTBOX
 1120
 655
 xcor-reporter
-\"[run number]\"
+\"[step]\"
 1
 0
 String (reporter)
@@ -292,10 +296,10 @@ String (reporter)
 INPUTBOX
 212
 205
-530
+527
 265
 ycor-reporter
-\"ticks\"
+\"percent-burned\"
 1
 0
 String (reporter)
@@ -358,7 +362,7 @@ INPUTBOX
 group-by
 NIL
 1
-1
+0
 String (reporter)
 
 BUTTON
@@ -368,74 +372,6 @@ BUTTON
 199
 NIL
 regroup
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-38
-548
-226
-581
-NIL
-ask turtles [ show-turtle ]
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-39
-592
-221
-625
-NIL
-ask turtles [ hide-turtle ]
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-290
-565
-409
-598
-color-patches
-ask patches [\n  let x pxcor\n  let y pycor\n  let t min-one-of turtles [ (abs (x - xcor)) + (abs (y - ycor)) ]\n  set pcolor [ color ] of t\n]
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-291
-603
-409
-636
-reset-patches
-ask patches [ set pcolor black ]
 NIL
 1
 T
@@ -511,10 +447,44 @@ INPUTBOX
 525
 70
 filter-by
-(get \"interaction\") = \"evidential\"
+NIL
 1
 0
 String (reporter)
+
+BUTTON
+20
+565
+222
+598
+NIL
+export-world user-new-file
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+15
+605
+182
+638
+NIL
+import-world user-file
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -859,7 +829,7 @@ Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 
 @#$#@#$#@
-NetLogo 5.1.0-RC2
+NetLogo 5.2-RC3
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
