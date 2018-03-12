@@ -5,7 +5,7 @@ A visualization tool for NetLogo BehaviorSpace runs.
 
 Goals
 ---
-- [ ] Import arbitrary CSV in intelligently, allowing easy access from NetLogo code.
+- [x] Import arbitrary CSV in intelligently, allowing easy access from NetLogo code.
     - Currently supports basic, unquoted csv... you have to modify BehaviorSpace output to do this. Opening up in Excel and hitting save usually does this.
 - [x] Visualize data as points with attributes (xcor, ycor, color, label, size) set to arbitray reporters based on data.
 - [x] Intelligent defaults for attribute scaling.
